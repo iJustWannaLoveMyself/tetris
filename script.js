@@ -29,6 +29,9 @@ function onKeydown(event) {
         case 'ArrowRight':
             moveRight();
             break;
+        case ' ':
+            dropDown();
+            break;
         default:
             break;
     }
@@ -60,6 +63,17 @@ function rotate() {
     draw();
 }
 
+function dropDown(){
+    tetris.dropTetrominoDown();
+    draw();
+    stopLoop();
+    startLoop();
+
+    if (tetris.isGameOver){
+        gameOver();
+    }
+}
+
 function startLoop() {
     timeoutId=setTimeout(()=>requestId=requestAnimationFrame(moveDown),700);
 }
@@ -73,6 +87,7 @@ function draw() {
     cells.forEach(cell => cell.removeAttribute('class'));
     drawPlayfield();
     drawTetromino();
+    drawGhostTetromino();
 }
 
 function drawPlayfield() {
@@ -95,6 +110,17 @@ function drawTetromino() {
             if (tetris.tetromino.row + row < 0) continue;
             const cellIndex = convertPositionToIndex(tetris.tetromino.row + row, tetris.tetromino.column + column);
             cells[cellIndex].classList.add(name);
+        }
+    }
+}
+
+function drawGhostTetromino() {
+    const tetrominoMatrixSize = tetris.tetromino.matrix.length;
+    for (let row = 0; row < tetrominoMatrixSize; row++) {
+        for (let column = 0; column < tetrominoMatrixSize; column++) {
+            if (!tetris.tetromino.matrix[row][column]) continue;
+            const cellIndex = convertPositionToIndex(tetris.tetromino.ghostRow+row, tetris.tetromino.column + column);
+            cells[cellIndex].classList.add('ghost');
         }
     }
 }
