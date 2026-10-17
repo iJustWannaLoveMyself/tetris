@@ -39,6 +39,10 @@ function moveDown() {
     draw();
     stopLoop();
     startLoop();
+
+    if(tetris.isGameOver){
+        gameOver();
+    }
 }
 
 function moveLeft() {
@@ -93,4 +97,9 @@ function drawTetromino() {
             cells[cellIndex].classList.add(name);
         }
     }
+}
+
+function gameOver() {
+    stopLoop();
+    document.removeEventListener('keydown', onKeydown);
 }
