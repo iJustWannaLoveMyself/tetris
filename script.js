@@ -1,5 +1,5 @@
 import {Tetris} from "./tetris.js";
-import {PLAYFIELD_COLUMNS, PLAYFIELD_ROWS, convertPositionToIndex} from "./utilities.js";
+import {PLAYFIELD_COLUMNS, PLAYFIELD_ROWS, SAD, convertPositionToIndex} from "./utilities.js";
 
 let requestId;
 let timeoutId;
@@ -43,7 +43,7 @@ function moveDown() {
     stopLoop();
     startLoop();
 
-    if(tetris.isGameOver){
+    if (tetris.isGameOver) {
         gameOver();
     }
 }
@@ -63,19 +63,19 @@ function rotate() {
     draw();
 }
 
-function dropDown(){
+function dropDown() {
     tetris.dropTetrominoDown();
     draw();
     stopLoop();
     startLoop();
 
-    if (tetris.isGameOver){
+    if (tetris.isGameOver) {
         gameOver();
     }
 }
 
 function startLoop() {
-    timeoutId=setTimeout(()=>requestId=requestAnimationFrame(moveDown),700);
+    timeoutId = setTimeout(() => requestId = requestAnimationFrame(moveDown), 700);
 }
 
 function stopLoop() {
@@ -119,7 +119,8 @@ function drawGhostTetromino() {
     for (let row = 0; row < tetrominoMatrixSize; row++) {
         for (let column = 0; column < tetrominoMatrixSize; column++) {
             if (!tetris.tetromino.matrix[row][column]) continue;
-            const cellIndex = convertPositionToIndex(tetris.tetromino.ghostRow+row, tetris.tetromino.column + column);
+            if (tetris.tetromino.ghostRow + row < 0) continue;
+            const cellIndex = convertPositionToIndex(tetris.tetromino.ghostRow + row, tetris.tetromino.ghostColumn + column);
             cells[cellIndex].classList.add('ghost');
         }
     }
@@ -128,4 +129,26 @@ function drawGhostTetromino() {
 function gameOver() {
     stopLoop();
     document.removeEventListener('keydown', onKeydown);
+    gameOverAnimation();
+}
+
+function gameOverAnimation() {
+    const filledCells = [...cells].filter(cell => cell.classList.length > 0)
+    filledCells.forEach((cell, i) => {
+        setTimeout(() => cell.classList.add('hide'), i * 10);
+        setTimeout(() => cell.removeAttribute('class'), i * 10 + 500);
+    });
+
+    setTimeout(drawSad, filledCells.length * 10 + 1000);
+}
+
+function drawSad() {
+    const TOP_OFFSET = 5;
+    for (let row = 0; row < SAD.length; row++) {
+        for (let column = 0; column < SAD[0].length; column++) {
+            if (!SAD[row][column]) continue;
+            const cellIndex = convertPositionToIndex(TOP_OFFSET + row, column);
+            cells[cellIndex].classList.add('sad');
+        }
+    }
 }
