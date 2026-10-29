@@ -4,11 +4,21 @@ import {PLAYFIELD_COLUMNS, PLAYFIELD_ROWS, SAD, convertPositionToIndex} from "./
 let requestId;
 let timeoutId;
 
-const tetris = new Tetris();
+let tetris = new Tetris();
+
+const gridElement = document.querySelector('.grid');
+const totalCells = PLAYFIELD_COLUMNS * PLAYFIELD_ROWS;
+
+for (let i = 0; i < totalCells; i++) {
+    const div = document.createElement('div');
+    gridElement.appendChild(div);
+}
+
 const cells = document.querySelectorAll('.grid>div');
 
-initKeydown();
+let isGameOverFinished = false;
 
+initKeydown();
 moveDown();
 
 function initKeydown() {
@@ -16,6 +26,13 @@ function initKeydown() {
 }
 
 function onKeydown(event) {
+    if (isGameOverFinished) {
+        restartGame();
+        return;
+    }
+
+    if (tetris.isGameOver) return;
+
     switch (event.key) {
         case 'ArrowUp':
             rotate();
@@ -128,18 +145,20 @@ function drawGhostTetromino() {
 
 function gameOver() {
     stopLoop();
-    document.removeEventListener('keydown', onKeydown);
     gameOverAnimation();
 }
 
 function gameOverAnimation() {
-    const filledCells = [...cells].filter(cell => cell.classList.length > 0)
+    const filledCells = [...cells].filter(cell => cell.classList.length > 0);
     filledCells.forEach((cell, i) => {
         setTimeout(() => cell.classList.add('hide'), i * 10);
         setTimeout(() => cell.removeAttribute('class'), i * 10 + 500);
     });
 
-    setTimeout(drawSad, filledCells.length * 10 + 1000);
+    setTimeout(() => {
+        drawSad();
+        isGameOverFinished = true;
+    }, filledCells.length * 10 + 1000);
 }
 
 function drawSad() {
@@ -151,4 +170,11 @@ function drawSad() {
             cells[cellIndex].classList.add('sad');
         }
     }
+}
+
+function restartGame() {
+    isGameOverFinished = false;
+    tetris = new Tetris();
+    draw();
+    moveDown();
 }
