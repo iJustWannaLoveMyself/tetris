@@ -4,7 +4,7 @@ import {PLAYFIELD_COLUMNS, PLAYFIELD_ROWS, SAD, convertPositionToIndex} from "./
 let requestId;
 let timeoutId;
 
-let tetris = new Tetris();
+let tetris = loadGame();
 
 const gridElement = document.querySelector('.grid');
 const totalCells = PLAYFIELD_COLUMNS * PLAYFIELD_ROWS;
@@ -19,6 +19,7 @@ const cells = document.querySelectorAll('.grid>div');
 let isGameOverFinished = false;
 
 initKeydown();
+draw();
 moveDown();
 
 function initKeydown() {
@@ -57,6 +58,7 @@ function onKeydown(event) {
 function moveDown() {
     tetris.moveTetrominoDown();
     draw();
+    saveGame();
     stopLoop();
     startLoop();
 
@@ -68,21 +70,25 @@ function moveDown() {
 function moveLeft() {
     tetris.moveTetrominoLeft();
     draw();
+    saveGame();
 }
 
 function moveRight() {
     tetris.moveTetrominoRight();
     draw();
+    saveGame();
 }
 
 function rotate() {
     tetris.rotateTetromino();
     draw();
+    saveGame();
 }
 
 function dropDown() {
     tetris.dropTetrominoDown();
     draw();
+    saveGame();
     stopLoop();
     startLoop();
 
@@ -145,6 +151,7 @@ function drawGhostTetromino() {
 
 function gameOver() {
     stopLoop();
+    localStorage.removeItem('tetris-save');
     gameOverAnimation();
 }
 
@@ -174,7 +181,32 @@ function drawSad() {
 
 function restartGame() {
     isGameOverFinished = false;
+    localStorage.removeItem('tetris-save');
     tetris = new Tetris();
     draw();
     moveDown();
+}
+
+function saveGame() {
+    if (tetris.isGameOver) return;
+    localStorage.setItem('tetris-save', JSON.stringify(tetris));
+}
+
+function loadGame() {
+    const savedData = localStorage.getItem('tetris-save');
+    if (!savedData) {
+        return new Tetris();
+    }
+
+    try {
+        const parsedData = JSON.parse(savedData);
+        const game = new Tetris();
+        game.playfield = parsedData.playfield;
+        game.tetromino = parsedData.tetromino;
+        game.isGameOver = parsedData.isGameOver;
+        return game;
+    } catch (e) {
+        console.error('Ошибка при загрузке сохранения:', e);
+        return new Tetris();
+    }
 }
