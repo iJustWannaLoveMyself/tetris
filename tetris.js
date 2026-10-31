@@ -9,9 +9,11 @@ import {
 
 export class Tetris {
     constructor() {
-        this.playfield;
-        this.tetromino;
+        this.playfield = [];
+        this.tetromino = null;
         this.isGameOver = false;
+        this.score = 0;
+        this.highScore = Number(localStorage.getItem('tetris-high-score')) || 0;
         this.init();
     }
 
@@ -39,7 +41,7 @@ export class Tetris {
             column,
             ghostColumn: column,
             ghostRow: row,
-        }
+        };
 
         this.calculateGhostPosition();
     }
@@ -132,7 +134,21 @@ export class Tetris {
 
     processFilledRows() {
         const filledLines = this.findFilledRows();
-        this.removeFilledRows(filledLines);
+        if (filledLines.length > 0) {
+            this.calculateScore(filledLines.length);
+            this.removeFilledRows(filledLines);
+        }
+    }
+
+    calculateScore(clearedLines) {
+        const pointsMap = { 1: 100, 2: 300, 3: 500, 4: 800 };
+        const points = pointsMap[clearedLines] || 0;
+        this.score += points;
+
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('tetris-high-score', this.highScore.toString());
+        }
     }
 
     findFilledRows() {

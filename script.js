@@ -7,6 +7,9 @@ let timeoutId;
 let tetris = loadGame();
 
 const gridElement = document.querySelector('.grid');
+const scoreElement = document.querySelector('#score');
+const highScoreElement = document.querySelector('#high-score');
+
 const totalCells = PLAYFIELD_COLUMNS * PLAYFIELD_ROWS;
 
 for (let i = 0; i < totalCells; i++) {
@@ -111,6 +114,12 @@ function draw() {
     drawPlayfield();
     drawTetromino();
     drawGhostTetromino();
+    drawScore();
+}
+
+function drawScore() {
+    scoreElement.textContent = tetris.score;
+    highScoreElement.textContent = tetris.highScore;
 }
 
 function drawPlayfield() {
@@ -204,6 +213,7 @@ function loadGame() {
         game.playfield = parsedData.playfield;
         game.tetromino = parsedData.tetromino;
         game.isGameOver = parsedData.isGameOver;
+        game.score = parsedData.score || 0;
         return game;
     } catch (e) {
         console.error('Ошибка при загрузке сохранения:', e);
