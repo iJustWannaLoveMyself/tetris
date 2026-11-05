@@ -1,14 +1,12 @@
 import {Tetris} from "./tetris.js";
-import {PLAYFIELD_COLUMNS, PLAYFIELD_ROWS, SAD, convertPositionToIndex} from "./utilities.js";
-
-let requestId;
-let timeoutId;
+import {PLAYFIELD_COLUMNS, PLAYFIELD_ROWS, SAD, TETROMINOES, convertPositionToIndex,} from "./utilities.js";
 
 let tetris = loadGame();
 
 const gridElement = document.querySelector('.grid');
 const scoreElement = document.querySelector('#score');
 const highScoreElement = document.querySelector('#high-score');
+const nextQueueElement = document.querySelector('.next-queue');
 
 const totalCells = PLAYFIELD_COLUMNS * PLAYFIELD_ROWS;
 
@@ -21,9 +19,14 @@ const cells = document.querySelectorAll('.grid>div');
 
 let isGameOverFinished = false;
 
+let dropInterval = 700;
+let timeSinceLastDrop = 0;
+let lastUpdateTime = performance.now();
+let animationFrameId = null;
+
 initKeydown();
 draw();
-moveDown();
+startLoop();
 
 function initKeydown() {
     document.addEventListener('keydown', onKeydown);
@@ -58,12 +61,21 @@ function onKeydown(event) {
     }
 }
 
+function startLoop() {
+    lastUpdateTime = performance.now();
+    timeSinceLastDrop = 0;
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = requestAnimationFrame(update);
+}
+
+function stopLoop() {
+    cancelAnimationFrame(animationFrameId);
+}
+
 function moveDown() {
     tetris.moveTetrominoDown();
     draw();
     saveGame();
-    stopLoop();
-    startLoop();
 
     if (tetris.isGameOver) {
         gameOver();
@@ -92,29 +104,19 @@ function dropDown() {
     tetris.dropTetrominoDown();
     draw();
     saveGame();
-    stopLoop();
-    startLoop();
 
     if (tetris.isGameOver) {
         gameOver();
     }
 }
 
-function startLoop() {
-    timeoutId = setTimeout(() => requestId = requestAnimationFrame(moveDown), 700);
-}
-
-function stopLoop() {
-    cancelAnimationFrame(requestId);
-    clearTimeout(timeoutId);
-}
-
 function draw() {
-    cells.forEach(cell => cell.removeAttribute('class'));
+    cells.forEach((cell) => cell.removeAttribute('class'));
     drawPlayfield();
     drawTetromino();
     drawGhostTetromino();
     drawScore();
+    drawNextQueue();
 }
 
 function drawScore() {
@@ -135,24 +137,24 @@ function drawPlayfield() {
 
 function drawTetromino() {
     const name = tetris.tetromino.name;
-    const tetrominoMatrixSize = tetris.tetromino.matrix.length;
-    for (let row = 0; row < tetrominoMatrixSize; row++) {
-        for (let column = 0; column < tetrominoMatrixSize; column++) {
+    const size = tetris.tetromino.matrix.length;
+    for (let row = 0; row < size; row++) {
+        for (let column = 0; column < size; column++) {
             if (!tetris.tetromino.matrix[row][column]) continue;
             if (tetris.tetromino.row + row < 0) continue;
-            const cellIndex = convertPositionToIndex(tetris.tetromino.row + row, tetris.tetromino.column + column);
+            const cellIndex = convertPositionToIndex(tetris.tetromino.row + row, tetris.tetromino.column + column,);
             cells[cellIndex].classList.add(name);
         }
     }
 }
 
 function drawGhostTetromino() {
-    const tetrominoMatrixSize = tetris.tetromino.matrix.length;
-    for (let row = 0; row < tetrominoMatrixSize; row++) {
-        for (let column = 0; column < tetrominoMatrixSize; column++) {
+    const size = tetris.tetromino.matrix.length;
+    for (let row = 0; row < size; row++) {
+        for (let column = 0; column < size; column++) {
             if (!tetris.tetromino.matrix[row][column]) continue;
             if (tetris.tetromino.ghostRow + row < 0) continue;
-            const cellIndex = convertPositionToIndex(tetris.tetromino.ghostRow + row, tetris.tetromino.ghostColumn + column);
+            const cellIndex = convertPositionToIndex(tetris.tetromino.ghostRow + row, tetris.tetromino.ghostColumn + column,);
             cells[cellIndex].classList.add('ghost');
         }
     }
@@ -165,16 +167,16 @@ function gameOver() {
 }
 
 function gameOverAnimation() {
-    const filledCells = [...cells].filter(cell => cell.classList.length > 0);
+    const filledCells = [...cells].filter((cell) => cell.classList.length > 0);
     filledCells.forEach((cell, i) => {
         setTimeout(() => cell.classList.add('hide'), i * 10);
         setTimeout(() => cell.removeAttribute('class'), i * 10 + 500);
     });
 
     setTimeout(() => {
-        drawSad();
-        isGameOverFinished = true;
-    }, filledCells.length * 10 + 1000);
+            drawSad();
+            isGameOverFinished = true;
+        }, filledCells.length * 10 + 1000,);
 }
 
 function drawSad() {
@@ -193,7 +195,7 @@ function restartGame() {
     localStorage.removeItem('tetris-save');
     tetris = new Tetris();
     draw();
-    moveDown();
+    startLoop();
 }
 
 function saveGame() {
@@ -203,15 +205,14 @@ function saveGame() {
 
 function loadGame() {
     const savedData = localStorage.getItem('tetris-save');
-    if (!savedData) {
-        return new Tetris();
-    }
+    if (!savedData) return new Tetris();
 
     try {
         const parsedData = JSON.parse(savedData);
         const game = new Tetris();
         game.playfield = parsedData.playfield;
         game.tetromino = parsedData.tetromino;
+        game.nextQueue = parsedData.nextQueue || game.nextQueue;
         game.isGameOver = parsedData.isGameOver;
         game.score = parsedData.score || 0;
         return game;
@@ -219,4 +220,46 @@ function loadGame() {
         console.error('Ошибка при загрузке сохранения:', e);
         return new Tetris();
     }
+}
+
+function update(time = performance.now()) {
+    const deltaTime = time - lastUpdateTime;
+    lastUpdateTime = time;
+
+    if (!tetris.isGameOver && !isGameOverFinished) {
+        timeSinceLastDrop += deltaTime;
+        if (timeSinceLastDrop > dropInterval) {
+            moveDown();
+            timeSinceLastDrop = 0;
+        }
+        animationFrameId = requestAnimationFrame(update);
+    }
+}
+
+function drawNextQueue() {
+    if (!nextQueueElement) return;
+    nextQueueElement.innerHTML = '';
+
+    tetris.nextQueue.forEach((shapeName) => {
+        const matrix = TETROMINOES[shapeName];
+        const container = document.createElement('div');
+        container.className = 'next-item';
+
+        const miniGrid = document.createElement('div');
+        miniGrid.className = 'mini-grid';
+        miniGrid.style.gridTemplateColumns = `repeat(${matrix.length}, 1fr)`;
+
+        for (let r = 0; r < matrix.length; r++) {
+            for (let c = 0; c < matrix[r].length; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'mini-cell';
+                if (matrix[r][c]) {
+                    cell.classList.add(shapeName);
+                }
+                miniGrid.appendChild(cell);
+            }
+        }
+        container.appendChild(miniGrid);
+        nextQueueElement.appendChild(container);
+    });
 }
