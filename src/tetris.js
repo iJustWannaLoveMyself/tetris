@@ -14,7 +14,20 @@ export class Tetris {
     this.nextQueue = [];
     this.isGameOver = false;
     this.score = 0;
-    this.highScore = typeof localStorage !== "undefined" && localStorage.getItem("tetris-high-score") ? Number(localStorage.getItem("tetris-high-score")) : 0;
+
+    this.highScore = 0;
+    try {
+      const savedHighScore = localStorage.getItem("tetris-high-score");
+
+      if (savedHighScore !== null) {
+        const value = Number(savedHighScore);
+
+        if (Number.isFinite(value) && value >= 0) {
+          this.highScore = value;
+        }
+      }
+    } catch {}
+
     this.init();
   }
 
@@ -27,12 +40,15 @@ export class Tetris {
   }
 
   generatePlayfield() {
-    this.playfield = new Array(PLAYFIELD_ROWS).fill()
+    this.playfield = new Array(PLAYFIELD_ROWS)
+      .fill()
       .map(() => new Array(PLAYFIELD_COLUMNS).fill(0));
   }
 
   addUniqueRandomTetromino() {
-    const availableNames = TETROMINO_NAMES.filter((name) => !this.nextQueue.includes(name),);
+    const availableNames = TETROMINO_NAMES.filter(
+      (name) => !this.nextQueue.includes(name),
+    );
     const pool = availableNames.length > 0 ? availableNames : TETROMINO_NAMES;
     const name = getRandomElement(pool);
     this.nextQueue.push(name);
@@ -136,7 +152,9 @@ export class Tetris {
           return;
         }
 
-        this.playfield[this.tetromino.row + row][this.tetromino.column + column] = this.tetromino.name;
+        this.playfield[this.tetromino.row + row][
+          this.tetromino.column + column
+        ] = this.tetromino.name;
       }
     }
 
@@ -163,9 +181,9 @@ export class Tetris {
 
     if (this.score > this.highScore) {
       this.highScore = this.score;
-      if (typeof localStorage !== "undefined") {
+      try {
         localStorage.setItem("tetris-high-score", this.highScore.toString());
-      }
+      } catch {}
     }
   }
 
@@ -181,7 +199,9 @@ export class Tetris {
   }
 
   removeFilledRows(filledRows) {
-    filledRows.forEach((row) => {this.dropRowsAbove(row);});
+    filledRows.forEach((row) => {
+      this.dropRowsAbove(row);
+    });
   }
 
   dropRowsAbove(rowToDelete) {

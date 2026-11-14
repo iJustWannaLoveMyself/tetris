@@ -16,6 +16,33 @@ body {
   user-select: none;
 }
 
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player input {
+  -webkit-user-select: text;
+  user-select: text;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font: inherit;
+  outline: none;
+}
+
+.player input:focus {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.player input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .game-container {
   display: flex;
   flex-direction: column;
@@ -103,7 +130,8 @@ body {
 .grid > div.sad {
   background-color: #f2c35b;
   transition:
-    background-color 0.5s, box-shadow 0.5s;
+    background-color 0.5s,
+    box-shadow 0.5s;
 }
 
 .grid > div.hide {

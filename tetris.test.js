@@ -2,23 +2,52 @@ import { describe, it, expect } from "vitest";
 import { Tetris } from "./src/tetris.js";
 
 describe("Правила", () => {
-  it("1) Игровое поле инициализируется размером 20 рядов на 10 колонок", () => {
+  it("1) Метод moveTetrominoLeft смещает фигуру влево и не выводит её за границу поля", () => {
     const game = new Tetris();
-    expect(game.playfield.length).toBe(20);
-    expect(game.playfield[0].length).toBe(10);
+    const initialColumn = game.tetromino.column;
+
+    game.moveTetrominoLeft();
+    expect(game.tetromino.column).toBe(initialColumn - 1);
+
+    for (let i = 0; i < 10; i++) {
+      game.moveTetrominoLeft();
+    }
+
+    const minColumnAfterWallHit = game.tetromino.column;
+
+    game.moveTetrominoLeft();
+    expect(game.tetromino.column).toBe(minColumnAfterWallHit);
+
+    const matrixSize = game.tetromino.matrix.length;
+    for (let row = 0; row < matrixSize; row++) {
+      for (let column = 0; column < matrixSize; column++) {
+        if (game.tetromino.matrix[row][column]) {
+          const absoluteColumn = game.tetromino.column + column;
+          expect(absoluteColumn).toBeGreaterThanOrEqual(0);
+        }
+      }
+    }
   });
 
-  it("2) Список следующих фигур (очередь) содержит ровно 3 элемента", () => {
+  it("2) Метод rotateTetromino изменяет матрицу текущей фигуры", () => {
     const game = new Tetris();
-    expect(game.nextQueue.length).toBe(3);
+    const oldMatrix = JSON.stringify(game.tetromino.matrix);
+    game.rotateTetromino();
+    const newMatrix = JSON.stringify(game.tetromino.matrix);
+
+    if (game.tetromino.name !== "O") {
+      expect(newMatrix).not.toBe(oldMatrix);
+    } else {
+      expect(newMatrix).toBe(oldMatrix);
+    }
   });
 
-  it("3) Начисление очков за очищенные линии работает корректно", () => {
+  it("3) Метод dropTetrominoDown фиксирует фигуру и генерирует новую", () => {
     const game = new Tetris();
-    expect(game.score).toBe(0);
-    game.calculateScore(1);
-    expect(game.score).toBe(100);
-    game.calculateScore(2);
-    expect(game.score).toBe(400);
+    const previousTetromino = game.tetromino;
+
+    game.dropTetrominoDown();
+
+    expect(game.tetromino).not.toBe(previousTetromino);
   });
 });

@@ -1,40 +1,40 @@
-import sample from "../node_modules/lodash-es/sample.js";
+import { sample } from "lodash-es";
 
 export const PLAYFIELD_COLUMNS = 10;
 export const PLAYFIELD_ROWS = 20;
-export const TETROMINO_NAMES = ['I', 'J', 'L', 'O', 'S', 'Z', 'T'];
+export const TETROMINO_NAMES = ["I", "J", "L", "O", "S", "Z", "T"];
 export const TETROMINOES = {
-  'I': [
+  I: [
     [0, 0, 0, 0],
     [1, 1, 1, 1],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ],
-  'J': [
+  J: [
     [1, 0, 0],
     [1, 1, 1],
     [0, 0, 0],
   ],
-  'L': [
+  L: [
     [0, 0, 1],
     [1, 1, 1],
     [0, 0, 0],
   ],
-  'O': [
+  O: [
     [1, 1],
     [1, 1],
   ],
-  'S': [
+  S: [
     [0, 1, 1],
     [1, 1, 0],
     [0, 0, 0],
   ],
-  'Z': [
+  Z: [
     [1, 1, 0],
     [0, 1, 1],
     [0, 0, 0],
   ],
-  'T': [
+  T: [
     [0, 1, 0],
     [1, 1, 1],
     [0, 0, 0],
