@@ -8,12 +8,15 @@ import {
   convertPositionToIndex,
 } from "./utilities.js";
 
-let tetris = loadGame();
+//=== DOM-элементы ===//
 
 const gridElement = document.querySelector(".grid");
 const scoreElement = document.querySelector("#score");
 const highScoreElement = document.querySelector("#high-score");
 const nextQueueElement = document.querySelector(".next-queue");
+const nameInput = document.querySelector("#player-name");
+
+//=== Построение поля ===//
 
 const totalCells = PLAYFIELD_COLUMNS * PLAYFIELD_ROWS;
 
@@ -24,21 +27,97 @@ for (let i = 0; i < totalCells; i++) {
 
 const cells = document.querySelectorAll(".grid>div");
 
+//=== Состояние игры ===//
+
+let tetris = loadGame();
 let isGameOverFinished = false;
+let playerName = loadPlayerName();
+
+//=== Состояние цикла и отрисовки ===//
 
 let dropInterval = 700;
 let timeSinceLastDrop = 0;
 let lastUpdateTime = performance.now();
 let animationFrameId = null;
+let renderedQueueKey = "";
 
-const nameInput = document.querySelector("#player-name");
-let playerName = loadPlayerName();
+//=== Запуск ===//
+
 nameInput.value = playerName;
 nameInput.addEventListener("input", onNameInput);
 
 initKeydown();
 draw();
 startLoop();
+
+//=== Игровой цикл ===//
+
+function startLoop() {
+  lastUpdateTime = performance.now();
+  timeSinceLastDrop = 0;
+  cancelAnimationFrame(animationFrameId);
+  animationFrameId = requestAnimationFrame(update);
+}
+
+function stopLoop() {
+  cancelAnimationFrame(animationFrameId);
+}
+
+function update(time) {
+  const deltaTime = Math.min(time - lastUpdateTime, 100);
+  lastUpdateTime = time;
+
+  timeSinceLastDrop += deltaTime;
+  if (timeSinceLastDrop >= dropInterval) {
+    timeSinceLastDrop -= dropInterval;
+    tetris.moveTetrominoDown();
+    saveGame();
+  }
+  draw();
+
+  if (tetris.isGameOver) {
+    gameOver();
+    return;
+  }
+  animationFrameId = requestAnimationFrame(update);
+}
+
+//=== Состояние игры ===//
+
+function gameOver() {
+  stopLoop();
+  try {
+    localStorage.removeItem("tetris-save");
+  } catch {}
+  gameOverAnimation();
+}
+
+function gameOverAnimation() {
+  const filledCells = [...cells].filter((cell) => cell.classList.length > 0);
+  filledCells.forEach((cell, i) => {
+    setTimeout(() => cell.classList.add("hide"), i * 10);
+    setTimeout(() => cell.removeAttribute("class"), i * 10 + 500);
+  });
+  setTimeout(
+    () => {
+      drawSad();
+      isGameOverFinished = true;
+    },
+    filledCells.length * 10 + 1000,
+  );
+}
+
+function restartGame() {
+  isGameOverFinished = false;
+  renderedQueueKey = "";
+  try {
+    localStorage.removeItem("tetris-save");
+  } catch {}
+  tetris = new Tetris();
+  startLoop();
+}
+
+//=== Ввод ===//
 
 function initKeydown() {
   document.addEventListener("keydown", onKeydown);
@@ -76,16 +155,14 @@ function onKeydown(event) {
   saveGame();
 }
 
-function startLoop() {
-  lastUpdateTime = performance.now();
-  timeSinceLastDrop = 0;
-  cancelAnimationFrame(animationFrameId);
-  animationFrameId = requestAnimationFrame(update);
+function onNameInput(event) {
+  playerName = event.target.value.slice(0, 10);
+  try {
+    localStorage.setItem("tetris-player-name", playerName);
+  } catch {}
 }
 
-function stopLoop() {
-  cancelAnimationFrame(animationFrameId);
-}
+//=== Отрисовка ===//
 
 function draw() {
   cells.forEach((cell) => cell.removeAttribute("class"));
@@ -143,26 +220,36 @@ function drawGhostTetromino() {
   }
 }
 
-function gameOver() {
-  stopLoop();
-  localStorage.removeItem("tetris-save");
-  gameOverAnimation();
-}
+function drawNextQueue() {
+  if (!nextQueueElement) return;
 
-function gameOverAnimation() {
-  const filledCells = [...cells].filter((cell) => cell.classList.length > 0);
-  filledCells.forEach((cell, i) => {
-    setTimeout(() => cell.classList.add("hide"), i * 10);
-    setTimeout(() => cell.removeAttribute("class"), i * 10 + 500);
+  const queueKey = tetris.nextQueue.join("");
+  if (queueKey === renderedQueueKey) return;
+  renderedQueueKey = queueKey;
+  nextQueueElement.replaceChildren();
+
+  tetris.nextQueue.forEach((shapeName) => {
+    const matrix = TETROMINOES[shapeName];
+    const container = document.createElement("div");
+    container.className = "next-item";
+
+    const miniGrid = document.createElement("div");
+    miniGrid.className = "mini-grid";
+    miniGrid.style.gridTemplateColumns = `repeat(${matrix.length}, 1fr)`;
+
+    for (let r = 0; r < matrix.length; r++) {
+      for (let c = 0; c < matrix[r].length; c++) {
+        const cell = document.createElement("div");
+        cell.className = "mini-cell";
+        if (matrix[r][c]) {
+          cell.classList.add(shapeName);
+        }
+        miniGrid.appendChild(cell);
+      }
+    }
+    container.appendChild(miniGrid);
+    nextQueueElement.appendChild(container);
   });
-
-  setTimeout(
-    () => {
-      drawSad();
-      isGameOverFinished = true;
-    },
-    filledCells.length * 10 + 1000,
-  );
 }
 
 function drawSad() {
@@ -176,18 +263,43 @@ function drawSad() {
   }
 }
 
-function restartGame() {
-  isGameOverFinished = false;
-  localStorage.removeItem("tetris-save");
-  tetris = new Tetris();
-  startLoop();
-}
+//=== Сохранение и загрузка ===//
 
 function saveGame() {
   if (tetris.isGameOver) return;
   try {
     localStorage.setItem("tetris-save", JSON.stringify(tetris));
   } catch {}
+}
+
+function loadGame() {
+  try {
+    const savedData = localStorage.getItem("tetris-save");
+    if (!savedData) return new Tetris();
+
+    const parsedData = JSON.parse(savedData);
+    if (!isValidSave(parsedData)) throw new Error("повреждённое сохранение");
+
+    const game = new Tetris();
+    game.playfield = parsedData.playfield;
+    game.tetromino = {
+      ...parsedData.tetromino,
+      ghostRow: parsedData.tetromino.row,
+      ghostColumn: parsedData.tetromino.column,
+    };
+    game.nextQueue = parsedData.nextQueue;
+    game.isGameOver = parsedData.isGameOver;
+    game.score = parsedData.score;
+
+    if (!game.isValid()) throw new Error("некорректное положение фигуры");
+    game.calculateGhostPosition();
+    return game;
+  } catch {
+    try {
+      localStorage.removeItem("tetris-save");
+    } catch {}
+    return new Tetris();
+  }
 }
 
 function isValidSave(data) {
@@ -254,86 +366,7 @@ function isValidSave(data) {
   ) {
     return false;
   }
-
   return true;
-}
-
-function loadGame() {
-  try {
-    const savedData = localStorage.getItem("tetris-save");
-    if (!savedData) return new Tetris();
-
-    const parsedData = JSON.parse(savedData);
-    if (!isValidSave(parsedData)) throw new Error("повреждённое сохранение");
-
-    const game = new Tetris();
-    game.playfield = parsedData.playfield;
-    game.tetromino = {
-      ...parsedData.tetromino,
-      ghostRow: parsedData.tetromino.row,
-      ghostColumn: parsedData.tetromino.column,
-    };
-    game.nextQueue = parsedData.nextQueue;
-    game.isGameOver = parsedData.isGameOver;
-    game.score = parsedData.score;
-
-    if (!game.isValid()) throw new Error("некорректное положение фигуры");
-    game.calculateGhostPosition();
-    return game;
-  } catch {
-    try {
-      localStorage.removeItem("tetris-save");
-    } catch {}
-    return new Tetris();
-  }
-}
-
-function update(time) {
-  const deltaTime = Math.min(time - lastUpdateTime, 100);
-  lastUpdateTime = time;
-
-  timeSinceLastDrop += deltaTime;
-  if (timeSinceLastDrop >= dropInterval) {
-    timeSinceLastDrop -= dropInterval;
-    tetris.moveTetrominoDown();
-    saveGame();
-  }
-  draw();
-
-  if (tetris.isGameOver) {
-    gameOver();
-    return;
-  }
-
-  animationFrameId = requestAnimationFrame(update);
-}
-
-function drawNextQueue() {
-  if (!nextQueueElement) return;
-  nextQueueElement.innerHTML = "";
-
-  tetris.nextQueue.forEach((shapeName) => {
-    const matrix = TETROMINOES[shapeName];
-    const container = document.createElement("div");
-    container.className = "next-item";
-
-    const miniGrid = document.createElement("div");
-    miniGrid.className = "mini-grid";
-    miniGrid.style.gridTemplateColumns = `repeat(${matrix.length}, 1fr)`;
-
-    for (let r = 0; r < matrix.length; r++) {
-      for (let c = 0; c < matrix[r].length; c++) {
-        const cell = document.createElement("div");
-        cell.className = "mini-cell";
-        if (matrix[r][c]) {
-          cell.classList.add(shapeName);
-        }
-        miniGrid.appendChild(cell);
-      }
-    }
-    container.appendChild(miniGrid);
-    nextQueueElement.appendChild(container);
-  });
 }
 
 function loadPlayerName() {
@@ -343,11 +376,4 @@ function loadPlayerName() {
   } catch {
     return "";
   }
-}
-
-function onNameInput(event) {
-  playerName = event.target.value.slice(0, 10);
-  try {
-    localStorage.setItem("tetris-player-name", playerName);
-  } catch {}
 }
