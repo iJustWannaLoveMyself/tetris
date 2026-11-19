@@ -26,6 +26,8 @@ const cells = document.querySelectorAll(".grid>div");
 
 let isGameOverFinished = false;
 
+let renderedQueueKey = '';
+
 let dropInterval = 700;
 let timeSinceLastDrop = 0;
 let lastUpdateTime = performance.now();
@@ -145,7 +147,9 @@ function drawGhostTetromino() {
 
 function gameOver() {
   stopLoop();
-  localStorage.removeItem("tetris-save");
+  try {
+    localStorage.removeItem("tetris-save");
+  } catch {}
   gameOverAnimation();
 }
 
@@ -178,7 +182,10 @@ function drawSad() {
 
 function restartGame() {
   isGameOverFinished = false;
-  localStorage.removeItem("tetris-save");
+  renderedQueueKey = '';
+  try {
+    localStorage.removeItem("tetris-save");
+  } catch {}
   tetris = new Tetris();
   startLoop();
 }
@@ -310,7 +317,11 @@ function update(time) {
 
 function drawNextQueue() {
   if (!nextQueueElement) return;
-  nextQueueElement.innerHTML = "";
+
+  const queueKey = tetris.nextQueue.join('');
+  if (queueKey === renderedQueueKey) return;
+  renderedQueueKey = queueKey;
+  nextQueueElement.replaceChildren();
 
   tetris.nextQueue.forEach((shapeName) => {
     const matrix = TETROMINOES[shapeName];
