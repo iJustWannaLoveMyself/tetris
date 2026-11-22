@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Tetris } from "./src/tetris.js";
+import { Tetris } from "./src/game/tetris";
 
 describe("Правила", () => {
   it("1) Метод moveTetrominoLeft смещает фигуру влево и не выводит её за границу поля", () => {
