@@ -47,13 +47,13 @@ export class Tetris {
 
   generatePlayfield(): void {
     this.playfield = Array.from({ length: PLAYFIELD_ROWS }, () =>
-        this.createEmptyRow(),
+      this.createEmptyRow(),
     );
   }
 
   addUniqueRandomTetromino(): void {
     const availableNames = TETROMINO_NAMES.filter(
-        (name) => !this.nextQueue.includes(name),
+      (name) => !this.nextQueue.includes(name),
     );
     const pool = availableNames.length > 0 ? availableNames : TETROMINO_NAMES;
     const name = getRandomElement(pool);
@@ -138,17 +138,17 @@ export class Tetris {
 
   isOutsideOfGameBoard(row: number, column: number): boolean {
     return (
-        this.tetromino.column + column < 0 ||
-        this.tetromino.column + column >= PLAYFIELD_COLUMNS ||
-        this.tetromino.row + row >= this.playfield.length
+      this.tetromino.column + column < 0 ||
+      this.tetromino.column + column >= PLAYFIELD_COLUMNS ||
+      this.tetromino.row + row >= this.playfield.length
     );
   }
 
   isCollides(row: number, column: number): boolean {
     return Boolean(
-        this.playfield[this.tetromino.row + row]?.[
+      this.playfield[this.tetromino.row + row]?.[
         this.tetromino.column + column
-            ],
+      ],
     );
   }
 
@@ -163,8 +163,8 @@ export class Tetris {
         }
 
         this.playfield[this.tetromino.row + row][
-        this.tetromino.column + column
-            ] = this.tetromino.name;
+          this.tetromino.column + column
+        ] = this.tetromino.name;
       }
     }
 
