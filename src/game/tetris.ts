@@ -5,33 +5,35 @@ import {
   TETROMINOES,
   getRandomElement,
   rotateMatrix,
-} from "./utilities.js";
+} from "./utilities";
+import type {
+  ActiveTetromino,
+  Playfield,
+  PlayfieldCell,
+  TetrominoName,
+} from "./utilities";
+
+const POINTS_BY_LINES: Record<number, number> = {
+  1: 100,
+  2: 300,
+  3: 500,
+  4: 800,
+};
 
 export class Tetris {
-  constructor() {
-    this.playfield = [];
-    this.tetromino = null;
-    this.nextQueue = [];
-    this.isGameOver = false;
-    this.score = 0;
+  playfield: Playfield = [];
+  tetromino!: ActiveTetromino;
+  nextQueue: TetrominoName[] = [];
+  isGameOver = false;
+  score = 0;
+  highScore: number;
 
-    this.highScore = 0;
-    try {
-      const savedHighScore = localStorage.getItem("tetris-high-score");
-
-      if (savedHighScore !== null) {
-        const value = Number(savedHighScore);
-
-        if (Number.isFinite(value) && value >= 0) {
-          this.highScore = value;
-        }
-      }
-    } catch {}
-
+  constructor(highScore = 0) {
+    this.highScore = highScore;
     this.init();
   }
 
-  init() {
+  init(): void {
     this.generatePlayfield();
     while (this.nextQueue.length < 3) {
       this.addUniqueRandomTetromino();
@@ -39,13 +41,17 @@ export class Tetris {
     this.generateTetromino();
   }
 
-  generatePlayfield() {
-    this.playfield = new Array(PLAYFIELD_ROWS)
-      .fill()
-      .map(() => new Array(PLAYFIELD_COLUMNS).fill(0));
+  private createEmptyRow(): PlayfieldCell[] {
+    return new Array<PlayfieldCell>(PLAYFIELD_COLUMNS).fill(0);
   }
 
-  addUniqueRandomTetromino() {
+  generatePlayfield(): void {
+    this.playfield = Array.from({ length: PLAYFIELD_ROWS }, () =>
+      this.createEmptyRow(),
+    );
+  }
+
+  addUniqueRandomTetromino(): void {
     const availableNames = TETROMINO_NAMES.filter(
       (name) => !this.nextQueue.includes(name),
     );
@@ -54,8 +60,11 @@ export class Tetris {
     this.nextQueue.push(name);
   }
 
-  generateTetromino() {
+  generateTetromino(): void {
     const name = this.nextQueue.shift();
+    if (name === undefined) {
+      throw new Error("Очередь фигур пуста");
+    }
     this.addUniqueRandomTetromino();
 
     const matrix = TETROMINOES[name];
@@ -74,7 +83,7 @@ export class Tetris {
     this.calculateGhostPosition();
   }
 
-  moveTetrominoDown() {
+  moveTetrominoDown(): void {
     this.tetromino.row += 1;
     if (!this.isValid()) {
       this.tetromino.row -= 1;
@@ -82,7 +91,7 @@ export class Tetris {
     }
   }
 
-  moveTetrominoLeft() {
+  moveTetrominoLeft(): void {
     this.tetromino.column -= 1;
     if (!this.isValid()) {
       this.tetromino.column += 1;
@@ -91,7 +100,7 @@ export class Tetris {
     }
   }
 
-  moveTetrominoRight() {
+  moveTetrominoRight(): void {
     this.tetromino.column += 1;
     if (!this.isValid()) {
       this.tetromino.column -= 1;
@@ -100,10 +109,9 @@ export class Tetris {
     }
   }
 
-  rotateTetromino() {
+  rotateTetromino(): void {
     const oldMatrix = this.tetromino.matrix;
-    const rotatedMatrix = rotateMatrix(this.tetromino.matrix);
-    this.tetromino.matrix = rotatedMatrix;
+    this.tetromino.matrix = rotateMatrix(oldMatrix);
     if (!this.isValid()) {
       this.tetromino.matrix = oldMatrix;
     } else {
@@ -111,12 +119,12 @@ export class Tetris {
     }
   }
 
-  dropTetrominoDown() {
+  dropTetrominoDown(): void {
     this.tetromino.row = this.tetromino.ghostRow;
     this.placeTetromino();
   }
 
-  isValid() {
+  isValid(): boolean {
     const matrixSize = this.tetromino.matrix.length;
     for (let row = 0; row < matrixSize; row++) {
       for (let column = 0; column < matrixSize; column++) {
@@ -128,7 +136,7 @@ export class Tetris {
     return true;
   }
 
-  isOutsideOfGameBoard(row, column) {
+  isOutsideOfGameBoard(row: number, column: number): boolean {
     return (
       this.tetromino.column + column < 0 ||
       this.tetromino.column + column >= PLAYFIELD_COLUMNS ||
@@ -136,13 +144,15 @@ export class Tetris {
     );
   }
 
-  isCollides(row, column) {
-    return this.playfield[this.tetromino.row + row]?.[
-      this.tetromino.column + column
-    ];
+  isCollides(row: number, column: number): boolean {
+    return Boolean(
+      this.playfield[this.tetromino.row + row]?.[
+        this.tetromino.column + column
+      ],
+    );
   }
 
-  placeTetromino() {
+  placeTetromino(): void {
     const matrixSize = this.tetromino.matrix.length;
     for (let row = 0; row < matrixSize; row++) {
       for (let column = 0; column < matrixSize; column++) {
@@ -162,11 +172,11 @@ export class Tetris {
     this.generateTetromino();
   }
 
-  isOutsideOfTopBoard(row) {
+  isOutsideOfTopBoard(row: number): boolean {
     return this.tetromino.row + row < 0;
   }
 
-  processFilledRows() {
+  processFilledRows(): void {
     const filledLines = this.findFilledRows();
     if (filledLines.length > 0) {
       this.calculateScore(filledLines.length);
@@ -174,44 +184,38 @@ export class Tetris {
     }
   }
 
-  calculateScore(clearedLines) {
-    const pointsMap = { 1: 100, 2: 300, 3: 500, 4: 800 };
-    const points = pointsMap[clearedLines] || 0;
-    this.score += points;
+  calculateScore(clearedLines: number): void {
+    this.score += POINTS_BY_LINES[clearedLines] ?? 0;
 
     if (this.score > this.highScore) {
       this.highScore = this.score;
-      try {
-        localStorage.setItem("tetris-high-score", this.highScore.toString());
-      } catch {}
     }
   }
 
-  findFilledRows() {
-    const filledRows = [];
+  findFilledRows(): number[] {
+    const filledRows: number[] = [];
     for (let row = 0; row < PLAYFIELD_ROWS; row++) {
       if (this.playfield[row].every((cell) => Boolean(cell))) {
         filledRows.push(row);
       }
     }
-
     return filledRows;
   }
 
-  removeFilledRows(filledRows) {
+  removeFilledRows(filledRows: number[]): void {
     filledRows.forEach((row) => {
       this.dropRowsAbove(row);
     });
   }
 
-  dropRowsAbove(rowToDelete) {
+  dropRowsAbove(rowToDelete: number): void {
     for (let row = rowToDelete; row > 0; row--) {
       this.playfield[row] = this.playfield[row - 1];
     }
-    this.playfield[0] = new Array(PLAYFIELD_COLUMNS).fill(0);
+    this.playfield[0] = this.createEmptyRow();
   }
 
-  calculateGhostPosition() {
+  calculateGhostPosition(): void {
     const tetrominoRow = this.tetromino.row;
     this.tetromino.row++;
     while (this.isValid()) {

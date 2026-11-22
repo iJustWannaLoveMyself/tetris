@@ -1,32 +1,38 @@
-export default [
+import js from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
+import { defineConfig } from "eslint/config";
+
+export default defineConfig([
   {
     ignores: ["dist/**", "node_modules/**"],
   },
+
+  js.configs.recommended,
+  tseslint.configs.recommended,
+
   {
+    files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: {
-        window: "readonly",
-        document: "readonly",
-        localStorage: "readonly",
-        performance: "readonly",
-        requestAnimationFrame: "readonly",
-        cancelAnimationFrame: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        console: "readonly",
-        fetch: "readonly",
-        MutationObserver: "readonly",
-        global: "readonly",
-        self: "readonly",
-        module: "readonly",
-        exports: "readonly",
-      },
+      globals: globals.browser,
+    },
+    plugins: {
+      "react-hooks": reactHooks,
     },
     rules: {
-      "no-unused-vars": "warn",
-      "no-undef": "error",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+      "@typescript-eslint/no-unused-vars": "warn",
     },
   },
-];
+
+  {
+    files: ["*.config.{js,ts}"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+]);
